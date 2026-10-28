@@ -56,10 +56,7 @@ LocalTrajectoryBuilder2D::TransformToGravityAlignedFrameAndFilter(
       sensor::CropRangeData(sensor::TransformRangeData(
                                 range_data, transform_to_gravity_aligned_frame),
                             options_.min_z(), options_.max_z());
-  return sensor::RangeData{
-      cropped.origin,
-      sensor::VoxelFilter(cropped.returns, options_.voxel_filter_size()),
-      sensor::VoxelFilter(cropped.misses, options_.voxel_filter_size())};
+  return sensor::VoxelFilter(cropped, options_.voxel_filter_size());
 }
 
 std::unique_ptr<transform::Rigid2d> LocalTrajectoryBuilder2D::ScanMatch(
@@ -175,11 +172,13 @@ LocalTrajectoryBuilder2D::AddRangeData(
     if (range >= options_.min_range()) {
       if (range <= options_.max_range()) {
         accumulated_range_data_.returns.push_back(hit_in_local);
+        accumulated_range_data_.return_origins.push_back(origin_in_local);
       } else {
         hit_in_local.position =
             origin_in_local +
             options_.missing_data_ray_length() / range * delta;
         accumulated_range_data_.misses.push_back(hit_in_local);
+        accumulated_range_data_.miss_origins.push_back(origin_in_local);
       }
     }
   }

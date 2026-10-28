@@ -132,6 +132,32 @@ TEST_F(RangeDataInserterTest2D, ProbabilityProgression) {
       1e-3);
 }
 
+TEST_F(RangeDataInserterTest2D, RaysBeginAtTheirOwnOrigins) {
+  sensor::RangeData range_data;
+  range_data.origin = Eigen::Vector3f{-0.5f, 0.5f, 0.f};
+  range_data.returns.push_back({Eigen::Vector3f{-3.5f, 3.5f, 0.f}});
+  range_data.return_origins.push_back(Eigen::Vector3f{-3.5f, 0.5f, 0.f});
+  range_data.misses.push_back({Eigen::Vector3f{-0.5f, 4.5f, 0.f}});
+  range_data.miss_origins.push_back(Eigen::Vector3f{-2.5f, 4.5f, 0.f});
+  range_data_inserter_->Insert(range_data, &probability_grid_);
+
+  const auto probability = [this](float x, float y) {
+    return probability_grid_.GetProbability(
+        probability_grid_.limits().GetCellIndex(Eigen::Vector2f(x, y)));
+  };
+  const auto is_known = [this](float x, float y) {
+    return probability_grid_.IsKnown(
+        probability_grid_.limits().GetCellIndex(Eigen::Vector2f(x, y)));
+  };
+  EXPECT_NEAR(options_.hit_probability(), probability(-3.5f, 3.5f), 1e-4);
+  EXPECT_NEAR(options_.miss_probability(), probability(-3.5f, 1.5f), 1e-4);
+  EXPECT_NEAR(options_.miss_probability(), probability(-1.5f, 4.5f), 1e-4);
+  // On the rays from 'origin', which neither ray crosses.
+  EXPECT_FALSE(is_known(-1.5f, 1.5f));
+  EXPECT_FALSE(is_known(-2.5f, 2.5f));
+  EXPECT_FALSE(is_known(-0.5f, 2.5f));
+}
+
 }  // namespace
 }  // namespace mapping
 }  // namespace cartographer

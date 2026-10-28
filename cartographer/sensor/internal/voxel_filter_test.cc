@@ -60,6 +60,30 @@ TEST(VoxelFilterTest, CorrectIntensities) {
   }
 }
 
+TEST(VoxelFilterTest, KeepsRayOriginsWithTheirPoints) {
+  RangeData range_data{Eigen::Vector3f::Zero(), {}, {}};
+  for (int i = 0; i < 100; ++i) {
+    const float value = 0.1f * i;
+    // Each origin encodes its point's z coordinate.
+    range_data.returns.push_back({{-100.f, 0.3f, value}});
+    range_data.return_origins.push_back({0.f, 0.f, value});
+    range_data.misses.push_back({{100.f, 0.3f, value}});
+    range_data.miss_origins.push_back({1.f, 0.f, value});
+  }
+  const RangeData result = VoxelFilter(range_data, 0.3f);
+
+  EXPECT_EQ(result.returns.points(),
+            VoxelFilter(range_data.returns, 0.3f).points());
+  ASSERT_EQ(result.return_origins.size(), result.returns.size());
+  for (size_t i = 0; i < result.returns.size(); ++i) {
+    EXPECT_EQ(result.returns[i].position.z(), result.return_origins[i].z());
+  }
+  ASSERT_EQ(result.miss_origins.size(), result.misses.size());
+  for (size_t i = 0; i < result.misses.size(); ++i) {
+    EXPECT_EQ(result.misses[i].position.z(), result.miss_origins[i].z());
+  }
+}
+
 TEST(VoxelFilterTest, HandlesLargeCoordinates) {
   const PointCloud point_cloud({{{100000.f, 0.f, 0.f}},
                                 {{100000.001f, -0.0001f, 0.0001f}},

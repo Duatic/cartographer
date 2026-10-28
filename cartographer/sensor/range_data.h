@@ -17,6 +17,8 @@
 #ifndef CARTOGRAPHER_SENSOR_RANGE_DATA_H_
 #define CARTOGRAPHER_SENSOR_RANGE_DATA_H_
 
+#include <vector>
+
 #include "cartographer/common/port.h"
 #include "cartographer/sensor/compressed_point_cloud.h"
 #include "cartographer/sensor/point_cloud.h"
@@ -25,14 +27,20 @@
 namespace cartographer {
 namespace sensor {
 
-// Rays begin at 'origin'. 'returns' are the points where obstructions were
-// detected. 'misses' are points in the direction of rays for which no return
-// was detected, and were inserted at a configured distance. It is assumed that
-// between the 'origin' and 'misses' is free space.
+// Rays begin at 'origin' unless they have origins of their own. 'returns' are
+// the points where obstructions were detected. 'misses' are points in the
+// direction of rays for which no return was detected, and were inserted at a
+// configured distance. It is assumed that between the 'origin' and 'misses' is
+// free space.
 struct RangeData {
   Eigen::Vector3f origin;
   PointCloud returns;
   PointCloud misses;
+  // Where the ray of each return and each miss begins. Empty, or parallel to
+  // 'returns' and 'misses' respectively; when empty, rays begin at 'origin'.
+  // Only the 2D probability grid inserter reads them; ToProto() drops them.
+  std::vector<Eigen::Vector3f> return_origins;
+  std::vector<Eigen::Vector3f> miss_origins;
 };
 
 RangeData TransformRangeData(const RangeData& range_data,

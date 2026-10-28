@@ -18,9 +18,45 @@
 
 #include "cartographer/sensor/proto/sensor.pb.h"
 #include "cartographer/transform/transform.h"
+#include "glog/logging.h"
 
 namespace cartographer {
 namespace sensor {
+
+namespace {
+
+// Applies 'transform' to each of 'origins'.
+std::vector<Eigen::Vector3f> TransformOrigins(
+    const std::vector<Eigen::Vector3f>& origins,
+    const transform::Rigid3f& transform) {
+  std::vector<Eigen::Vector3f> result;
+  result.reserve(origins.size());
+  for (const Eigen::Vector3f& origin : origins) {
+    result.push_back(transform * origin);
+  }
+  return result;
+}
+
+// Keeps the entries of 'origins', which is empty or parallel to 'points', whose
+// point CropPointCloud() keeps.
+std::vector<Eigen::Vector3f> CropOrigins(
+    const PointCloud& points, const std::vector<Eigen::Vector3f>& origins,
+    const float min_z, const float max_z) {
+  if (!origins.empty()) {
+    CHECK_EQ(origins.size(), points.size());
+  }
+  std::vector<Eigen::Vector3f> result;
+  result.reserve(origins.size());
+  for (size_t i = 0; i < origins.size(); ++i) {
+    const float z = points[i].position.z();
+    if (min_z <= z && z <= max_z) {
+      result.push_back(origins[i]);
+    }
+  }
+  return result;
+}
+
+}  // namespace
 
 RangeData TransformRangeData(const RangeData& range_data,
                              const transform::Rigid3f& transform) {
@@ -28,14 +64,18 @@ RangeData TransformRangeData(const RangeData& range_data,
       transform * range_data.origin,
       TransformPointCloud(range_data.returns, transform),
       TransformPointCloud(range_data.misses, transform),
+      TransformOrigins(range_data.return_origins, transform),
+      TransformOrigins(range_data.miss_origins, transform),
   };
 }
 
 RangeData CropRangeData(const RangeData& range_data, const float min_z,
                         const float max_z) {
-  return RangeData{range_data.origin,
-                   CropPointCloud(range_data.returns, min_z, max_z),
-                   CropPointCloud(range_data.misses, min_z, max_z)};
+  return RangeData{
+      range_data.origin, CropPointCloud(range_data.returns, min_z, max_z),
+      CropPointCloud(range_data.misses, min_z, max_z),
+      CropOrigins(range_data.returns, range_data.return_origins, min_z, max_z),
+      CropOrigins(range_data.misses, range_data.miss_origins, min_z, max_z)};
 }
 
 proto::RangeData ToProto(const RangeData& range_data) {

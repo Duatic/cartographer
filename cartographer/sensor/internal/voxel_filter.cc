@@ -129,16 +129,11 @@ std::vector<T> RandomizedVoxelFilter(const std::vector<T>& point_cloud,
   return results;
 }
 
-}  // namespace
-
-std::vector<RangefinderPoint> VoxelFilter(
-    const std::vector<RangefinderPoint>& points, const float resolution) {
-  return RandomizedVoxelFilter(
-      points, resolution,
-      [](const RangefinderPoint& point) { return point.position; });
-}
-
-PointCloud VoxelFilter(const PointCloud& point_cloud, const float resolution) {
+// Voxel filters 'point_cloud' and keeps the entries of 'origins', which is
+// empty or parallel to the points, of the points kept.
+std::pair<PointCloud, std::vector<Eigen::Vector3f>> VoxelFilterWithOrigins(
+    const PointCloud& point_cloud, const std::vector<Eigen::Vector3f>& origins,
+    const float resolution) {
   const std::vector<bool> points_used = RandomizedVoxelFilterIndices(
       point_cloud.points(), resolution,
       [](const RangefinderPoint& point) { return point.position; });
@@ -156,8 +151,42 @@ PointCloud VoxelFilter(const PointCloud& point_cloud, const float resolution) {
       filtered_intensities.push_back(point_cloud.intensities()[i]);
     }
   }
-  return PointCloud(std::move(filtered_points),
-                    std::move(filtered_intensities));
+  std::vector<Eigen::Vector3f> filtered_origins;
+  if (!origins.empty()) {
+    CHECK_EQ(origins.size(), point_cloud.size());
+    filtered_origins.reserve(filtered_points.size());
+  }
+  for (size_t i = 0; i < origins.size(); i++) {
+    if (points_used[i]) {
+      filtered_origins.push_back(origins[i]);
+    }
+  }
+  return {
+      PointCloud(std::move(filtered_points), std::move(filtered_intensities)),
+      std::move(filtered_origins)};
+}
+
+}  // namespace
+
+std::vector<RangefinderPoint> VoxelFilter(
+    const std::vector<RangefinderPoint>& points, const float resolution) {
+  return RandomizedVoxelFilter(
+      points, resolution,
+      [](const RangefinderPoint& point) { return point.position; });
+}
+
+PointCloud VoxelFilter(const PointCloud& point_cloud, const float resolution) {
+  return VoxelFilterWithOrigins(point_cloud, {}, resolution).first;
+}
+
+RangeData VoxelFilter(const RangeData& range_data, const float resolution) {
+  auto returns = VoxelFilterWithOrigins(range_data.returns,
+                                        range_data.return_origins, resolution);
+  auto misses = VoxelFilterWithOrigins(range_data.misses,
+                                       range_data.miss_origins, resolution);
+  return RangeData{range_data.origin, std::move(returns.first),
+                   std::move(misses.first), std::move(returns.second),
+                   std::move(misses.second)};
 }
 
 TimedPointCloud VoxelFilter(const TimedPointCloud& timed_point_cloud,
