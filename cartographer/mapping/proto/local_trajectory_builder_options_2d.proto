@@ -23,11 +23,16 @@ import "cartographer/mapping/proto/scan_matching/ceres_scan_matcher_options_2d.p
 import "cartographer/mapping/proto/scan_matching/real_time_correlative_scan_matcher_options.proto";
 import "cartographer/mapping/proto/submaps_options_2d.proto";
 
-// NEXT ID: 22
+// NEXT ID: 23
 message LocalTrajectoryBuilderOptions2D {
   // Rangefinder points outside these ranges will be dropped.
   float min_range = 14;
   float max_range = 15;
+
+  // Rangefinder points with a lower intensity will be dropped, such as beams
+  // reflected off glass. Sensors without intensities report 0 for laser scans
+  // and 1 for point clouds, so a higher value drops all of their points.
+  float min_intensity = 22;
   float min_z = 1;
   float max_z = 2;
 

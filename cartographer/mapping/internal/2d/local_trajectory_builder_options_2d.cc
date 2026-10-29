@@ -31,6 +31,7 @@ proto::LocalTrajectoryBuilderOptions2D CreateLocalTrajectoryBuilderOptions2D(
   proto::LocalTrajectoryBuilderOptions2D options;
   options.set_min_range(parameter_dictionary->GetDouble("min_range"));
   options.set_max_range(parameter_dictionary->GetDouble("max_range"));
+  options.set_min_intensity(parameter_dictionary->GetDouble("min_intensity"));
   options.set_min_z(parameter_dictionary->GetDouble("min_z"));
   options.set_max_z(parameter_dictionary->GetDouble("max_z"));
   options.set_missing_data_ray_length(

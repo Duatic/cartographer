@@ -157,9 +157,12 @@ LocalTrajectoryBuilder2D::AddRangeData(
     accumulated_range_data_ = sensor::RangeData{{}, {}, {}};
   }
 
-  // Drop any returns below the minimum range and convert returns beyond the
-  // maximum range into misses.
+  // Drop any returns below the minimum range or intensity and convert returns
+  // beyond the maximum range into misses.
   for (size_t i = 0; i < synchronized_data.ranges.size(); ++i) {
+    if (synchronized_data.ranges[i].intensity < options_.min_intensity()) {
+      continue;
+    }
     const sensor::TimedRangefinderPoint& hit =
         synchronized_data.ranges[i].point_time;
     const Eigen::Vector3f origin_in_local =
